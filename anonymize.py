@@ -50,10 +50,10 @@ class Anonymizer:
         os.makedirs(self.anon_folder, exist_ok=True)
 
     def anonymize(self):
-        data = pd.read_csv(self.data_path, delimiter=';')
-        ATT_NAMES = list(data.columns)
+        data = pd.read_csv(self.data_path, delimiter=';') #veriyi oku
+        ATT_NAMES = list(data.columns) # sütun başlıklarını al
         
-        data_params = get_dataset_params(self.data_name)
+        data_params = get_dataset_params(self.data_name) #parametreleri al veri setlerinin parametreleri hazır kayıtlı
         QI_INDEX = data_params['qi_index']
         IS_CAT2 = data_params['is_category']
 
