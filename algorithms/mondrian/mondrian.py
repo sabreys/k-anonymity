@@ -37,6 +37,7 @@ QI_RANGE = []
 QI_DICT = []
 QI_ORDER = []
 
+DEBUG= True
 
 class Partition(object):
 
@@ -78,6 +79,9 @@ class Partition(object):
 
 
 def get_normalized_width(partition, index):
+    if(DEBUG):print("get_normalized_width çagrıldı: "+"index:"+ str(index))
+    print("gelen partition allow:")
+    print(partition.allow)
     """
     return Normalized width of partition
     similar to NCP
@@ -86,6 +90,9 @@ def get_normalized_width(partition, index):
     width = value(d_order[partition.high[index]]) - value(d_order[partition.low[index]])
     if width == QI_RANGE[index]:
         return 1
+
+    print("gelen genişlik")
+    print(width * 1.0 / QI_RANGE[index])
     return width * 1.0 / QI_RANGE[index]
 
 
@@ -94,10 +101,14 @@ def choose_dimension(partition):
     choose dim with largest norm_width from all attributes.
     This function can be upgraded with other distance function.
     """
+
+    print("choose_dimension cagrıldı")
+    print("gelen partition:")
+    print(partition.member)
     max_width = -1
     max_dim = -1
     for dim in range(QI_LEN):
-        if partition.allow[dim] == 0:
+        if partition.allow[dim] == 0: # ??
             continue
         norm_width = get_normalized_width(partition, dim)
         if norm_width > max_width:
@@ -162,12 +173,15 @@ def anonymize_strict(partition):
     """
     recursively partition groups until not allowable
     """
+    print("anonymize başlıyor")
     allow_count = sum(partition.allow)
+    print("allow count = ")
+    print(allow_count)
     # only run allow_count times
     if allow_count == 0:
         RESULT.append(partition)
         return
-    for index in range(allow_count):
+    for index in range(allow_count): # sütun sayısı kadar dönüyor
         # choose attrubite from domain
         dim = choose_dimension(partition)
         if dim == -1:
@@ -273,13 +287,20 @@ def anonymize_relaxed(partition):
 
 
 def init(data, k, QI_num=-1):
+
     """
     reset global variables
     """
+
+    print("init çağırıldı.")
     global GL_K, RESULT, QI_LEN, QI_DICT, QI_RANGE, QI_ORDER
     if QI_num <= 0:
         QI_LEN = len(data[0]) - 1
+        print("QI_LEN(SUTUN SAYISI BU):")
+        print(QI_LEN)
     else:
+        print("QI_LEN(SUTUN SAYISI BU):")
+        print(QI_LEN)
         QI_LEN = QI_num
     GL_K = k
     RESULT = []
@@ -291,16 +312,26 @@ def init(data, k, QI_num=-1):
     for i in range(QI_LEN):
         att_values.append(set())
         QI_DICT.append(dict())
+
     for record in data:
         for i in range(QI_LEN):
             att_values[i].add(record[i])
+    print("burda içinde sözlükler olan diziye verileri aktarıyor. her sütunda  ozamana kadar gelmiş tüm değerleri kaydediyor.")
+    print("ATT_VALUES:")
+    print(att_values)
+
     for i in range(QI_LEN):
-        value_list = list(att_values[i])
+        value_list = list(att_values[i]) # sözlükten liste çevirme  2 boyutlu array oldu
+
         value_list.sort(key=cmp_to_key(cmp_value))
+        print(value_list)
         QI_RANGE.append(value(value_list[-1]) - value(value_list[0]))
         QI_ORDER.append(list(value_list))
         for index, qi_value in enumerate(value_list):
             QI_DICT[i][qi_value] = index
+    print("QI_DICT(veriler ve indisleri küçükten büyüğe sırasını tutuyor):")
+    print(QI_DICT)
+    print("init tamamlandı")
 
 
 def mondrian(data, k, relax=False, QI_num=-1):
@@ -315,34 +346,53 @@ def mondrian(data, k, relax=False, QI_num=-1):
     In strict mondrian, lhs and rhs have not intersection.
     But in relaxed mondrian, lhs may be have intersection with rhs.
     """
+    print("data:")
+    print(data)
     init(data, k, QI_num)
     result = []
     data_size = len(data)
+    print("data_size:")
+    print(data_size)
+
     low = [0] * QI_LEN
     high = [(len(t) - 1) for t in QI_ORDER]
+    print("low:")
+    print(low)
+    print("high(max veri indisi gibi duruyor):")
+    print(high)
     whole_partition = Partition(data, low, high)
+    print("partition tüm veriyi kapsıyor bu noktada")
+
+
     # begin mondrian
     start_time = time.time()
     if relax:
         # relax model
+        print("relax")
         anonymize_relaxed(whole_partition)
     else:
+        print("strict")
         # strict model
         anonymize_strict(whole_partition)
+
+
+    print("sonuçlar hesaplanıyor")
     rtime = float(time.time() - start_time)
     # generalization result and
     # evaluation information loss
     ncp = 0.0
     dp = 0.0
+    print("partition sayısı =")
+    print(RESULT.__len__())
     for partition in RESULT:
         rncp = 0.0
         for index in range(QI_LEN):
-            rncp += get_normalized_width(partition, index)
+            rncp += get_normalized_width(partition, index) # 0.4-1 arası geliyor hepsini toplayacak
         rncp *= len(partition)
         ncp += rncp
         dp += len(partition) ** 2
         for record in partition.member[:]:
-            for index in range(QI_LEN):
+            for index in range(QI_LEN): # tüm veriyi geziyor burda
                 record[index] = merge_qi_value(QI_ORDER[index][partition.low[index]],
                                 QI_ORDER[index][partition.high[index]])
             result.append(record)
@@ -350,7 +400,7 @@ def mondrian(data, k, relax=False, QI_num=-1):
     # please remove next three lines
     ncp /= QI_LEN
     ncp /= data_size
-    if __DEBUG:
+    if DEBUG:
         from decimal import Decimal
         print("Discernability Penalty=%.2E" % Decimal(str(dp)))
         print("size of partitions=%d" % len(RESULT))
