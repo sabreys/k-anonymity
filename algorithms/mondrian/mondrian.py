@@ -27,6 +27,7 @@ import time
 from .utils import cmp_value, value, merge_qi_value
 from functools import cmp_to_key
 
+
 # warning all these variables should be re-inited, if
 # you want to run mondrian with different parameters
 __DEBUG = False
