@@ -41,6 +41,7 @@ def classic_mondrian_anonymize(k, data, qi_index, mapping_dict=None, is_cat=None
         copy.deepcopy(data), 
         k, relax, len(qi_index))
 
+
     result_in_order = restore_column_order(result, qi_index)
 
     if mapping_dict is not None:

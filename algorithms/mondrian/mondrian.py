@@ -24,10 +24,19 @@ main module of mondrian
 
 import pdb
 import time
+
+from pyod.models.cblof import CBLOF
+from pyod.models.cof import COF
+from pyod.models.hbos import HBOS
+from pyod.models.lmdd import LMDD
+from pyod.models.loci import LOCI
+from pyod.models.ocsvm import OCSVM
+from pyod.models.sos import SOS
+
 from .utils import cmp_value, value, merge_qi_value
 from functools import cmp_to_key
-
-
+from pyod.models.lof import LOF
+from pyod.utils.example import visualize
 # warning all these variables should be re-inited, if
 # you want to run mondrian with different parameters
 __DEBUG = False
@@ -38,7 +47,9 @@ QI_RANGE = []
 QI_DICT = []
 QI_ORDER = []
 
-DEBUG= True
+OUTs=[]
+
+DEBUG= False
 
 class Partition(object):
 
@@ -81,8 +92,8 @@ class Partition(object):
 
 def get_normalized_width(partition, index):
     if(DEBUG):print("get_normalized_width çagrıldı: "+"index:"+ str(index))
-    print("gelen partition allow:")
-    print(partition.allow)
+    if DEBUG : print("gelen partition allow:")
+    if DEBUG : print(partition.allow)
     """
     return Normalized width of partition
     similar to NCP
@@ -92,8 +103,8 @@ def get_normalized_width(partition, index):
     if width == QI_RANGE[index]:
         return 1
 
-    print("gelen genişlik")
-    print(width * 1.0 / QI_RANGE[index])
+    if DEBUG : print("gelen genişlik")
+    if DEBUG : print(width * 1.0 / QI_RANGE[index])
     return width * 1.0 / QI_RANGE[index]
 
 
@@ -103,9 +114,9 @@ def choose_dimension(partition):
     This function can be upgraded with other distance function.
     """
 
-    print("choose_dimension cagrıldı")
-    print("gelen partition:")
-    print(partition.member)
+    if DEBUG : print("choose_dimension cagrıldı")
+    if DEBUG : print("gelen partition:")
+    if DEBUG : print(partition.member)
     max_width = -1
     max_dim = -1
     for dim in range(QI_LEN):
@@ -174,10 +185,10 @@ def anonymize_strict(partition):
     """
     recursively partition groups until not allowable
     """
-    print("anonymize başlıyor")
+
     allow_count = sum(partition.allow)
-    print("allow count = ")
-    print(allow_count)
+    #print("allow count = ")
+    if DEBUG : print(allow_count)
     # only run allow_count times
     if allow_count == 0:
         RESULT.append(partition)
@@ -297,11 +308,11 @@ def init(data, k, QI_num=-1):
     global GL_K, RESULT, QI_LEN, QI_DICT, QI_RANGE, QI_ORDER
     if QI_num <= 0:
         QI_LEN = len(data[0]) - 1
-        print("QI_LEN(SUTUN SAYISI BU):")
-        print(QI_LEN)
+        if DEBUG : print("QI_LEN(SUTUN SAYISI BU):")
+        if DEBUG : print(QI_LEN)
     else:
-        print("QI_LEN(SUTUN SAYISI BU):")
-        print(QI_LEN)
+        if DEBUG : print("QI_LEN(SUTUN SAYISI BU):")
+        if DEBUG : print(QI_LEN)
         QI_LEN = QI_num
     GL_K = k
     RESULT = []
@@ -317,23 +328,68 @@ def init(data, k, QI_num=-1):
     for record in data:
         for i in range(QI_LEN):
             att_values[i].add(record[i])
-    print("burda içinde sözlükler olan diziye verileri aktarıyor. her sütunda  ozamana kadar gelmiş tüm değerleri kaydediyor.")
-    print("ATT_VALUES:")
-    print(att_values)
+    if DEBUG : print("burda içinde sözlükler olan diziye verileri aktarıyor. her sütunda  ozamana kadar gelmiş tüm değerleri kaydediyor.")
+    if DEBUG : print("ATT_VALUES:")
+    if DEBUG : print(att_values)
 
     for i in range(QI_LEN):
         value_list = list(att_values[i]) # sözlükten liste çevirme  2 boyutlu array oldu
 
         value_list.sort(key=cmp_to_key(cmp_value))
-        print(value_list)
+        if DEBUG : print(value_list)
         QI_RANGE.append(value(value_list[-1]) - value(value_list[0]))
         QI_ORDER.append(list(value_list))
         for index, qi_value in enumerate(value_list):
             QI_DICT[i][qi_value] = index
-    print("QI_DICT(veriler ve indisleri küçükten büyüğe sırasını tutuyor):")
-    print(QI_DICT)
-    print("init tamamlandı")
+    if DEBUG : print("QI_DICT(veriler ve indisleri küçükten büyüğe sırasını tutuyor):")
+    if DEBUG : print(QI_DICT)
+    if DEBUG : print("init tamamlandı")
 
+
+def outlier(data):
+  out_index=0
+
+
+
+  for part in data:
+
+    OUTs.append([])
+    if DEBUG : print(part.member)
+    clf = COF(n_neighbors=10)
+
+
+    clf.fit( prepare_for_ouitler(part.member))
+    if DEBUG : print("outlier:")
+    if DEBUG : print(clf.labels_)
+
+
+
+    willdelete=[]
+    for i in range( clf.labels_.__len__()):
+
+        if(clf.labels_[i] ==1):
+            willdelete.append(part.member[i])
+
+    for i in willdelete:
+        #   OUTs[out_index].append(part.member[i])
+         part.member.remove(i)
+
+    if DEBUG : print(part.member)
+    if DEBUG : print("outs")
+    if DEBUG : print(OUTs)
+    out_index += 1
+
+
+
+def prepare_for_ouitler(data):
+    copy = data.copy()
+    for i in copy:
+        i[8] = int( i[8])
+        if i[9]== '<=50K':
+            i[9] = 0
+        else:
+            i[9]= 1
+    return copy
 
 def mondrian(data, k, relax=False, QI_num=-1):
     """
@@ -347,22 +403,22 @@ def mondrian(data, k, relax=False, QI_num=-1):
     In strict mondrian, lhs and rhs have not intersection.
     But in relaxed mondrian, lhs may be have intersection with rhs.
     """
-    print("data:")
-    print(data)
+    if DEBUG : print("data:")
+    if DEBUG : print(data)
     init(data, k, QI_num)
     result = []
     data_size = len(data)
-    print("data_size:")
-    print(data_size)
+    if DEBUG : print("data_size:")
+    if DEBUG : print(data_size)
 
     low = [0] * QI_LEN
     high = [(len(t) - 1) for t in QI_ORDER]
-    print("low:")
-    print(low)
-    print("high(max veri indisi gibi duruyor):")
-    print(high)
+    if DEBUG : print("low:")
+    if DEBUG : print(low)
+    if DEBUG : print("high(max veri indisi gibi duruyor):")
+    if DEBUG : print(high)
     whole_partition = Partition(data, low, high)
-    print("partition tüm veriyi kapsıyor bu noktada")
+    if DEBUG : print("partition tüm veriyi kapsıyor bu noktada")
 
 
     # begin mondrian
@@ -377,28 +433,34 @@ def mondrian(data, k, relax=False, QI_num=-1):
         anonymize_strict(whole_partition)
 
 
+    if DEBUG : print("partition 1")
+    if DEBUG : print(RESULT[0].member)
+
+    if DEBUG : print("partition 2")
+    if DEBUG : print(RESULT[1].member)
+
+
     print("sonuçlar hesaplanıyor")
     rtime = float(time.time() - start_time)
     # generalization result and
     # evaluation information loss
     ncp = 0.0
     dp = 0.0
-    print("partition sayısı =")
-    print(RESULT.__len__())
-    for partition in RESULT:
-        rncp = 0.0
-        for index in range(QI_LEN):
-            rncp += get_normalized_width(partition, index) # 0.4-1 arası geliyor hepsini toplayacak
-        rncp *= len(partition)
-        ncp += rncp
-        dp += len(partition) ** 2
-        for record in partition.member[:]:
-            for index in range(QI_LEN): # tüm veriyi geziyor burda
-                record[index] = merge_qi_value(QI_ORDER[index][partition.low[index]],
-                                QI_ORDER[index][partition.high[index]])
-            result.append(record)
-    # If you want to get NCP values instead of percentage
-    # please remove next three lines
+    if DEBUG : print("partition sayısı =")
+    if DEBUG : print(RESULT.__len__())
+
+
+    outlier(RESULT)
+
+
+
+    dp, ncp = genellestir(dp, ncp, result)
+
+
+    if DEBUG : print(RESULT[0].member)
+
+
+
     ncp /= QI_LEN
     ncp /= data_size
     if DEBUG:
@@ -408,3 +470,21 @@ def mondrian(data, k, relax=False, QI_num=-1):
         print("K=%d" % k)
         print("NCP = %.2f %%" % ncp)
     return (result, (ncp, rtime))
+
+
+def genellestir(dp, ncp, result):
+
+    for partition in RESULT:
+        rncp = 0.0
+        for index in range(QI_LEN):
+            rncp += get_normalized_width(partition, index)  # 0.4-1 arası geliyor hepsini toplayacak
+        rncp *= len(partition)
+        ncp += rncp
+        dp += len(partition) ** 2
+        for record in partition.member[:]:
+            for index in range(QI_LEN):  # tüm veriyi geziyor burda
+                record[index] = merge_qi_value(QI_ORDER[index][partition.low[index]],
+                                               QI_ORDER[index][partition.high[index]])
+            result.append(record)
+
+    return dp, ncp

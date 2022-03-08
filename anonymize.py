@@ -99,6 +99,8 @@ class Anonymizer:
         print(f"Anonymize with {self.method}")
         anon_data, runtime = k_anonymize(anon_params)
 
+
+
         # Write anonymized table
         if anon_data is not None:
             nodes_count = write_anon(
