@@ -34,6 +34,7 @@ def restore_num_to_cat(mapping_dict, data, qi_index, is_cat):
 def classic_mondrian_anonymize(k, data, qi_index, mapping_dict=None, is_cat=None, relax=False):
     """
     Classic Mondrian with no hierarchies, K-Anonymity
+    GENELLEŞTİRME BURDA
     """
     
     result, eval_result = mondrian(
