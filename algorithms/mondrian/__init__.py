@@ -1,5 +1,6 @@
 import sys, copy, random
-from .mondrian import mondrian
+
+from algorithms.mondrian.mondrian import Mondrian
 from utils.data import restore_column_order
 
 
@@ -37,9 +38,7 @@ def classic_mondrian_anonymize(k, data, qi_index, mapping_dict=None, is_cat=None
     GENELLEŞTİRME BURDA
     """
     
-    result, eval_result = mondrian(
-        copy.deepcopy(data), 
-        k, relax, len(qi_index))
+    result, eval_result = Mondrian().mondrian(copy.deepcopy(data),  k, relax, len(qi_index))
 
 
     result_in_order = restore_column_order(result, qi_index)
