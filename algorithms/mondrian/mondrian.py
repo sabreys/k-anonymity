@@ -28,6 +28,8 @@ import copy
 
 from pyod.models.cblof import CBLOF
 from pyod.models.cof import COF
+from pyod.models.copod import COPOD
+from pyod.models.ecod import ECOD
 from pyod.models.hbos import HBOS
 from pyod.models.lmdd import LMDD
 from pyod.models.loci import LOCI
@@ -268,7 +270,7 @@ class Mondrian:
         if split_val == '':
             # cannot split
             partition.allow[dim] = 0
-            anonymize_relaxed(partition)
+            self.anonymize_relaxed(partition)
             return
         # split the group from median
         mean = self.QI_DICT[dim][split_val]
@@ -305,23 +307,23 @@ class Mondrian:
         # if len(lhs) < self.GL_K or len(rhs) < self.GL_K:
         #     print "Error: split failure"
         # anonymize sub-partition
-        anonymize_relaxed(lhs)
-        anonymize_relaxed(rhs)
+        self.anonymize_relaxed(lhs)
+        self.anonymize_relaxed(rhs)
 
     def init(self,data, k, QI_num=-1):
         """
         reset global variables
         """
-        print(data.__len__())
+
         print("init çağırıldı.")
 
         if QI_num <= 0:
             self.QI_LEN = len(data[0]) - 1
             if DEBUG: print("QI_LEN(SUTUN SAYISI BU):")
-            if DEBUG: print(QI_LEN)
+            if DEBUG: print(self.QI_LEN)
         else:
             if DEBUG: print("QI_LEN(SUTUN SAYISI BU):")
-            if DEBUG: print(QI_LEN)
+            if DEBUG: print(self.QI_LEN)
             self.QI_LEN = QI_num
         self.GL_K = k
         self.RESULT = []
@@ -361,7 +363,7 @@ class Mondrian:
         for part in data:
 
 
-            clf = LOF(contamination=0.5 ,n_neighbors=4)
+            clf = COPOD(contamination=0.5 )
 
             if part.member.__len__() < 2:
                 return
@@ -403,8 +405,6 @@ class Mondrian:
         return copy
 
     def reverse_for_ouitler(self,data):
-        print("xxxxx")
-        print(data)
         i = data.copy()
         i[8] = str(i[8])
         if i[9] == 0:
@@ -425,8 +425,8 @@ class Mondrian:
         return copy
 
     def mondrian(self,data, k, relax=False, QI_num=-1,iter=1):
-        print("gelen veri :")
-        print(data.__len__())
+
+
         global ALLRES
         """
         Main function of mondrian, return result in tuple (result, (ncp, rtime)).
@@ -467,7 +467,6 @@ class Mondrian:
             print("relax")
             self.anonymize_relaxed(whole_partition)
         else:
-            print("strict")
             # strict model
             self.anonymize_strict(whole_partition)
 
@@ -478,17 +477,15 @@ class Mondrian:
         ncp = 0.0
         dp = 0.0
         if DEBUG: print("partition sayısı =")
-        if DEBUG: print(RESULT.__len__())
+        if DEBUG: print(self.RESULT.__len__())
 
-        print("zz")
-        print(self.RESULT.__len__())
+
 
         self.outlier(self.RESULT)
 
         ALLRES=ALLRES+self.RESULT
 
         generated = Mondrian()
-        print("burası")
 
         result2, eval_result2 = generated.mondrian(copy.deepcopy(self.outs),  k, False, QI_num,iter+1)
 
@@ -497,17 +494,40 @@ class Mondrian:
             result =  result +result2
 
 
+
         if(not iter == 1):
-            self.genellestir(dp, ncp, result)
-            return  result,[0.0,0.0]
+            dp2, ncp2 = self.genellestir(dp, ncp, result)
+
+
+
+            if eval_result2 != None:
+                dp3, ncp3 = eval_result2
+
+                if True:
+                    from decimal import Decimal
+
+                    ncp2 /= self.QI_LEN
+                    ncp2 /= data_size
+                    print("Discernability Penalty=%.2E" % Decimal(str(dp2)))
+                    print("size of partitions=%d" % len(self.RESULT))
+                    print("K=%d" % k)
+                    print("NCP = %.2f %%" % ncp2)
+                    print("*"*30)
+
+                return (result, (ncp2 + ncp3, dp2 + dp3))
+            else:
+                return (result,(ncp2, dp2))
+
 
 
 
 
 
         dp, ncp = self.genellestir(dp, ncp, result)
+        dp4, ncp4 = eval_result2
+        dp = dp + dp4
 
-        if DEBUG: print(RESULT[0].member)
+        if DEBUG: print(self.RESULT[0].member)
 
         ncp /= self.QI_LEN
         ncp /= data_size
@@ -534,5 +554,9 @@ class Mondrian:
                     record[index] = merge_qi_value(self.QI_ORDER[index][partition.low[index]],
                                                    self.QI_ORDER[index][partition.high[index]])
                 result.append(record)
+
+        print("genelleştirden gelen sonuç:")
+        print(dp)
+        print(ncp)
 
         return dp, ncp
