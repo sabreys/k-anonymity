@@ -363,7 +363,7 @@ class Mondrian:
         for part in data:
 
 
-            clf = COPOD(contamination=0.5 )
+            clf = COF(contamination=0.2 )
 
             if part.member.__len__() < 2:
                 return
