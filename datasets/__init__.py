@@ -3,10 +3,12 @@ from utils.types import Dataset
 
 def get_dataset_params(name):
     if name == Dataset.ADULT:
-        QI_INDEX = [1, 2, 3, 4, 5, 6, 7, 8]
+        QI_INDEX = [0, 2, 4,10,11,12]
         target_var = 'salary-class'
-        IS_CAT = [True, False, True, True, True, True, True, True]
+        IS_CAT = [False, False,False,False,False,False]
         max_numeric = {"age": 50.5}
+
+ #[False, True, False, True, False, True, True, True,True,True,False,False,False,True,True]
     elif name == Dataset.CMC:
         QI_INDEX = [1, 2, 4]
         target_var = 'method'

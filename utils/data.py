@@ -5,7 +5,7 @@ import os
 import pickle
 
 
-def read_raw(path, dataset, qi_index, is_cat, delimiter=';', sort_count=False):
+def read_raw(path, dataset, qi_index, is_cat, delimiter=',', sort_count=False):
     """Reads dataset from a csv file. Split in header and data
 
         :param file_path: Path to the csv file
@@ -66,7 +66,7 @@ def write_anon(path, anon_data, header, k, dataset, delimiter=';'):
         anon_data = anon_data.values()
     else:
         # Sort by ID (first column)
-        anon_data = sorted(anon_data, key=lambda x: int(x[0]))
+       # anon_data = sorted(anon_data, key=lambda x: int(x[0])) sort burda
         anon_data = [anon_data]
     for i, data in enumerate(anon_data):
         with open(os.path.join(path, dataset + "_anonymized_" + str(k) + ".csv"), mode='w', newline='') as anon_file:

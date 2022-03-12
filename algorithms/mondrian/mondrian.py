@@ -43,9 +43,11 @@ from pyod.utils.example import visualize
 
 # warning all these variables should be re-inited, if
 # you want to run mondrian with different parameters
-
+from ..utils.generalization.hierarchy_utilities import create_gen_hierarchy
 
 DEBUG = False
+
+
 class Partition(object):
     """
     Class for Group (or EC), which is used to keep records
@@ -55,7 +57,7 @@ class Partition(object):
     self.allow: show if partition can be split on this QI
     """
 
-    def __init__(self, data, low, high,QI_LEN):
+    def __init__(self, data, low, high, QI_LEN):
         """
         split_tuple = (index, low, high)
         """
@@ -83,13 +85,14 @@ class Partition(object):
         """
         return len(self.member)
 
-ALLRES= []
+
+ALLRES = []
+
 
 class Mondrian:
-
     DEBUG = False
 
-    def __init__(self,GL_K = 0, RESULT = None, QI_RANGE = None,  QI_DICT = None, QI_ORDER =None, outs = None):
+    def __init__(self, GL_K=0, RESULT=None, QI_RANGE=None, QI_DICT=None, QI_ORDER=None, outs=None):
         __DEBUG = False
         self.GL_K = GL_K
         self.QI_LEN = 10
@@ -99,16 +102,15 @@ class Mondrian:
         if QI_RANGE is None:
             self.QI_RANGE = []
         if QI_DICT is None:
-            self.QI_DICT =[]
+            self.QI_DICT = []
         if QI_ORDER is None:
-            self.QI_ORDER =[]
+            self.QI_ORDER = []
         if outs is None:
             self.outs = []
 
-       # global GL_K, RESULT, QI_LEN, QI_DICT, QI_RANGE, QI_ORDER
+    # global GL_K, RESULT, QI_LEN, QI_DICT, QI_RANGE, QI_ORDER
 
-
-    def get_normalized_width(self,partition, index):
+    def get_normalized_width(self, partition, index):
         if (DEBUG): print("get_normalized_width çagrıldı: " + "index:" + str(index))
         if DEBUG: print("gelen partition allow:")
         if DEBUG: print(partition.allow)
@@ -125,7 +127,7 @@ class Mondrian:
         if DEBUG: print(width * 1.0 / self.QI_RANGE[index])
         return width * 1.0 / self.QI_RANGE[index]
 
-    def choose_dimension(self,partition):
+    def choose_dimension(self, partition):
         """
         choose dim with largest norm_width from all attributes.
         This function can be upgraded with other distance function.
@@ -147,7 +149,7 @@ class Mondrian:
             pdb.set_trace()
         return max_dim
 
-    def frequency_set(self,partition, dim):
+    def frequency_set(self, partition, dim):
         """
         get the frequency_set of partition on dim
         """
@@ -159,7 +161,7 @@ class Mondrian:
                 frequency[record[dim]] = 1
         return frequency
 
-    def find_median(self,partition, dim):
+    def find_median(self, partition, dim):
         """
         find the middle of the partition, return split_val
         """
@@ -195,7 +197,7 @@ class Mondrian:
             next_val = split_val
         return (split_val, next_val, value_list[0], value_list[-1])
 
-    def anonymize_strict(self,partition):
+    def anonymize_strict(self, partition):
         """
         recursively partition groups until not allowable
         """
@@ -228,8 +230,8 @@ class Mondrian:
             rhs_low = partition.low[:]
             lhs_high[dim] = mean
             rhs_low[dim] = self.QI_DICT[dim][next_val]
-            lhs = Partition([], partition.low, lhs_high,self.QI_LEN)
-            rhs = Partition([], rhs_low, partition.high,self.QI_LEN)
+            lhs = Partition([], partition.low, lhs_high, self.QI_LEN)
+            rhs = Partition([], rhs_low, partition.high, self.QI_LEN)
             for record in partition.member:
                 pos = self.QI_DICT[dim][record[dim]]
                 if pos <= mean:
@@ -248,7 +250,7 @@ class Mondrian:
             return
         self.RESULT.append(partition)
 
-    def anonymize_relaxed(self,partition):
+    def anonymize_relaxed(self, partition):
         """
         recursively partition groups until not allowable
         """
@@ -278,8 +280,8 @@ class Mondrian:
         rhs_low = partition.low[:]
         lhs_high[dim] = mean
         rhs_low[dim] = self.QI_DICT[dim][next_val]
-        lhs = Partition([], partition.low, lhs_high,self.QI_LEN)
-        rhs = Partition([], rhs_low, partition.high,self.QI_LEN)
+        lhs = Partition([], partition.low, lhs_high, self.QI_LEN)
+        rhs = Partition([], rhs_low, partition.high, self.QI_LEN)
         mid_set = []
         for record in partition.member:
             pos = self.QI_DICT[dim][record[dim]]
@@ -310,7 +312,7 @@ class Mondrian:
         self.anonymize_relaxed(lhs)
         self.anonymize_relaxed(rhs)
 
-    def init(self,data, k, QI_num=-1):
+    def init(self, data, k, QI_num=-1):
         """
         reset global variables
         """
@@ -357,13 +359,12 @@ class Mondrian:
         if DEBUG: print(self.QI_DICT)
         if DEBUG: print("init tamamlandı")
 
-    def outlier(self,data):
+    def outlier(self, data):
         out_index = 0
 
         for part in data:
 
-
-            clf = COF(contamination=0.2 )
+            clf = COF(contamination=0.5, n_neighbors=2)
 
             if part.member.__len__() < 2:
                 return
@@ -372,39 +373,41 @@ class Mondrian:
             if DEBUG: print("outlier:")
             if DEBUG: print(clf.labels_)
 
-
-
             willdelete = []
             for i in range(clf.labels_.__len__()):
 
                 if (clf.labels_[i] == 1):
                     willdelete.append(part.member[i])
-                if (clf.labels_[i] == 0):
-                    part.member[i]=self.reverse_for_ouitler(part.member[i])
+                # if (clf.labels_[i] == 0):
+                #     part.member[i] = self.reverse_for_ouitler(part.member[i])
 
             for i in willdelete:
-                self.outs.append(self.reverse_for_ouitler(i))
+                self.outs.append(i)
                 part.member.remove(i)
-
-            if DEBUG: print(part.member)
 
 
 
             out_index += 1
 
+    def prepare_for_ouitler(self, data):
+
+        copy2 = copy.deepcopy(data)
+
+        for row in copy2:
+            del row[6]
+            del row[6]
+            del row[6]
+            del row[6]
+            del row[6]
+            del row[6]
+            del row[6]
+            del row[6]
+            del row[6]
 
 
-    def prepare_for_ouitler(self,data):
-        copy = data.copy()
-        for i in copy:
-            i[8] = int(i[8])
-            if i[9] == '<=50K':
-                i[9] = 0
-            else:
-                i[9] = 1
-        return copy
+        return copy2
 
-    def reverse_for_ouitler(self,data):
+    def reverse_for_ouitler(self, data):
         i = data.copy()
         i[8] = str(i[8])
         if i[9] == 0:
@@ -412,7 +415,6 @@ class Mondrian:
         else:
             i[9] = '>50K'
         return i
-
 
     def reverse_for_all(self, data):
         copy = data.copy()
@@ -424,8 +426,7 @@ class Mondrian:
                 i[9] = '>50K'
         return copy
 
-    def mondrian(self,data, k, relax=False, QI_num=-1,iter=1):
-
+    def mondrian(self, data, k, relax=False, QI_num=-1, iter=1):
 
         global ALLRES
         """
@@ -441,7 +442,7 @@ class Mondrian:
         """
 
         if data.__len__() < 1:
-            return None,None
+            return None, None
 
         if DEBUG: print("data:")
         if DEBUG: print(data)
@@ -457,7 +458,7 @@ class Mondrian:
         if DEBUG: print(low)
         if DEBUG: print("high(max veri indisi gibi duruyor):")
         if DEBUG: print(high)
-        whole_partition = Partition(data, low, high,self.QI_LEN)
+        whole_partition = Partition(data, low, high, self.QI_LEN)
         if DEBUG: print("partition tüm veriyi kapsıyor bu noktada")
 
         # begin mondrian
@@ -486,7 +487,8 @@ class Mondrian:
         ALLRES=ALLRES+self.RESULT
 
         generated = Mondrian()
-
+        print("outs::")
+        print(self.outs)
         result2, eval_result2 = generated.mondrian(copy.deepcopy(self.outs),  k, False, QI_num,iter+1)
 
 

@@ -35,7 +35,7 @@ def create_gen_hierarchy(path):
     :return: Created generalization hierarchy
     :rtype: list
     """
-    raw_data = read_data(path, ";")
+    raw_data = read_data(path, ",")
 
     headers = []
     for col in raw_data:

@@ -55,6 +55,7 @@ def read_data(path, dataset, ATT_NAMES, QI_INDEX, IS_CAT, SA_INDEX):
 def read_tree(path, dataset, ATT_NAMES, QI_INDEX, IS_CAT):
     """read tree from data/tree_*.txt, store them in att_tree
     """
+    print(IS_CAT)
     att_names = []
     att_trees = []
     for t in QI_INDEX:
